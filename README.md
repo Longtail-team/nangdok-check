@@ -19,16 +19,17 @@
 | `index.html` | 출석 앱 본체(UI+로직) + JSONP API 호출 + PWA |
 | `manifest.json` · `icons/` · `sw.js` | 홈 화면 앱 아이콘(🐯) · 설치 · 껍데기 캐시 |
 | `netlify.toml` | 빌드 없음, sw·manifest 캐시 최소화 |
-| `apps-script-doGet.gs.txt` | **Apps Script에 붙일 API doGet 코드**(아래 참고) |
+| `WebApp.template.gs` | **Apps Script 서버 코드 완성 템플릿**(새 과정마다 재사용) |
 
 ## 과정 API 주소 바꾸려면
 `index.html` 상단의 `const API = ".../exec"` 값만 수정. (과정마다 다른 exec)
 
-## 🔴 Apps Script 쪽 필수 세팅
-1. `apps-script-doGet.gs.txt` 내용으로 **기존 doGet 교체** → 새 버전으로 재배포
-   (getConfig/getFamilyByPhone/getLeaderboard/submitCheck 함수는 그대로 둠)
-2. 배포 액세스 권한 = **"모든 사용자(Anyone)"**
-3. 과정마다 별도 배포면 각 과정 스크립트에 같은 doGet 적용
+## 🔴 Apps Script 쪽 세팅 (새 과정 배포 = 코드 그대로, 설정탭만)
+`WebApp.template.gs` 를 과정 프로젝트에 넣고:
+1. 원본 **설정 탭**: `B4=과정명` · `B5=개강일(날짜)` · `B6=기간(주)` · `B7=메인색상 hex(선택)`
+2. **인증시트 D2** = 체크박스 수(총 학습일). 12주→60, 24주→120
+3. 배포 액세스 권한 = **"모든 사용자(Anyone)"** → 새 버전 배포
+4. 제목은 자동으로 **"{과정명} 출석페이지"**, 색은 B7 반영
 
 ## 배포 (GitHub → Netlify)
 GitHub `Longtail-team/nangdok-check` 에 커밋하면 Netlify 자동 재배포.
