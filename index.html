@@ -290,14 +290,13 @@
 const API = "https://script.google.com/a/macros/doingle.net/s/AKfycbx7437XL9U5fZ80NGm-61-ThGRGaVR0Bew4rPF63ogcNxRjlgxsr_3fCemt2OL_uuMwyA/exec";
 
 /* ---------- helpers ---------- */
-// 서버 함수를 JSONP(GET)로 호출 → CORS 없이 데이터만 받아옴. 기존 call() 사용부는 그대로.
+// 서버 함수를 JSONP(GET)로 1회 호출 → CORS 없이 데이터만 받아옴.
 let __jid=0;
-function call(fn){
-  const args=[].slice.call(arguments,1);
+function callOnce(fn, args){
   return new Promise((res,rej)=>{
     const cb='__jcb'+(++__jid);
     let s=null, done=false;
-    const t=setTimeout(()=>fin(null, new Error('시간 초과')),20000);
+    const t=setTimeout(()=>fin(null, new Error('시간 초과')),15000);
     function fin(data,err){
       if(done) return; done=true; clearTimeout(t);
       try{ delete window[cb]; }catch(e){ window[cb]=undefined; }
@@ -305,13 +304,24 @@ function call(fn){
       err?rej(err):res(data);
     }
     window[cb]=d=>fin(d,null);
-    let url=API+'?fn='+encodeURIComponent(fn)+'&callback='+cb;
+    let url=API+'?fn='+encodeURIComponent(fn)+'&callback='+cb+'&_t='+Date.now();
     args.forEach((a,i)=>{ url+='&a'+i+'='+encodeURIComponent(a); });
     s=document.createElement('script');
     s.src=url;
     s.onerror=()=>fin(null,new Error('네트워크 오류'));
     document.head.appendChild(s);
   });
+}
+// 자동 재시도(총 3회, 점점 늦게) → 순간 끊김·Apps Script 콜드스타트로 인한 '일부만 로딩' 방지.
+// 사용부는 그대로 call('getConfig') 처럼 쓰면 됨.
+function call(fn){
+  const args=[].slice.call(arguments,1);
+  const TRIES=3;
+  const go=(n)=> callOnce(fn,args).catch(err=>{
+    if(n>=TRIES) throw err;
+    return new Promise(r=>setTimeout(r, 600*n)).then(()=>go(n+1));
+  });
+  return go(1);
 }
 function getParam(k){ try{ return new URLSearchParams(location.search).get(k)||''; }catch(e){ return ''; } }
 function digits(s){ return String(s||'').replace(/[^0-9]/g,''); }
