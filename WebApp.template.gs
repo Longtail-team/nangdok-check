@@ -301,6 +301,45 @@ function _getSchedule_() {
 }
 
 // =================================================================
+// 인스타 자동 동기화: 인증시트 인스타 수정 → 원본시트에도 반영
+//   · 인증시트엔 연락처가 없어 인스타가 유일한 연결고리라, 둘이 어긋나면 로그인이 깨짐.
+//   · 인증시트 인스타 칸을 "한 칸" 고치면, 그 옛 인스타를 가진 원본시트 행을 새 값으로 교체.
+//   ※ 반드시 아래 installInstaSyncTrigger 를 "1회 실행"해서 설치형 트리거로 등록해야 작동.
+//     (설치형이라야 다른 스프레드시트(원본)에 쓸 권한이 생김)
+// =================================================================
+function onEditNangdok(e) {
+  try {
+    if (!e || !e.range) return;
+    if (e.range.getSheet().getName() !== TARGET_SHEET_NAME) return;         // 인증시트만
+    if (e.range.getColumn() !== COLUMN_MAP.TARGET.INSTAGRAM) return;        // 인스타 열만
+    if (e.range.getNumRows() !== 1 || e.range.getNumColumns() !== 1) return; // 한 칸만
+
+    var oldH = _igHandle(e.oldValue);
+    var newV = (e.value == null ? '' : String(e.value)).trim();
+    if (!oldH || !newV || oldH === _igHandle(newV)) return;   // 옛값 없음/그대로면 무시
+
+    var src = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(WEBAPP_SOURCE_SHEET_NAME);
+    var cols = _sourceCols_(src);
+    if (!src || cols.instagram < 0 || src.getLastRow() < 2) return;
+    var rng = src.getRange(2, cols.instagram, src.getLastRow() - 1, 1);
+    var v = rng.getValues(), changed = false;
+    for (var i = 0; i < v.length; i++) {
+      if (_igHandle(v[i][0]) === oldH) { v[i][0] = newV; changed = true; }   // 옛 핸들 → 새 값
+    }
+    if (changed) rng.setValues(v);
+  } catch (err) { console.log('insta sync: ' + err); }
+}
+
+/** 1회만 실행 → 인증시트 편집에 설치형 트리거 등록 */
+function installInstaSyncTrigger() {
+  var ss = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'onEditNangdok') ScriptApp.deleteTrigger(t);  // 중복 방지
+  });
+  ScriptApp.newTrigger('onEditNangdok').forSpreadsheet(ss).onEdit().create();
+}
+
+// =================================================================
 // 원본시트 열 헤더 매핑 (번호 고정 대신 헤더 이름으로)
 // =================================================================
 function _sourceCols_(sheet) {
