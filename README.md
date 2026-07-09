@@ -1,35 +1,34 @@
-# 전래동화 출석체크 (래퍼)
+# 전래동화 출석체크 (Netlify 프론트엔드)
 
-낭독스쿨 출석 앱(Google Apps Script)에 **홈 화면 앱 아이콘 + 자동 로그인**을 입히는 진입 페이지입니다.
-실제 출석 로직·시트 연결은 계속 Apps Script가 담당합니다.
+낭독스쿨 과정별 출석체크 앱. **화면은 이 Netlify 사이트가 직접 그리고**,
+데이터(출석/시트)는 Google Apps Script를 **JSON API로만** 호출합니다.
 
-> **동작 방식(중요):** 처음엔 iframe으로 감쌌으나, 구글이 Apps Script 앱을 남의 사이트 iframe 안
-> 내부 샌드박스로 띄우는 걸 모바일에서 막아(공백) → **"스마트 리다이렉트" 방식**으로 변경.
-> 홈 아이콘 탭 → 이 래퍼(🐯 스플래시) → 기억한 연락처(`?p=`)로 자동 로그인된 출석앱으로 **바로 이동**.
-> 앱이 iframe 없이 최상위로 실행돼서 안정적으로 뜨고, 앱 자체 기억 기능으로 재로그인도 방지됨.
+> **왜 이 구조인가:** 예전엔 Apps Script가 화면을 그려서 (1) 상단에 구글 회색 배지가
+> 붙고 (2) iframe 임베드가 모바일에서 공백이 되고 (3) 아이폰 주소창이 남았음.
+> → Apps Script를 **데이터 API**로만 쓰고 UI를 우리 도메인으로 옮겨 **셋 다 해결**.
+
+## 동작
+- 홈 아이콘/주소 접속 → 이 사이트가 바로 출석 UI 렌더 (iframe·리다이렉트 없음)
+- 서버 호출은 `call('getConfig' | 'getFamilyByPhone' | 'getLeaderboard' | 'submitCheck', …)`
+  → 내부적으로 **JSONP(GET)** 로 Apps Script `API`(`.../exec`) 호출 (CORS 회피)
+- `?p=010…` 로 개인 링크 자동 로그인, 연락처는 기기에 기억(재로그인 없음)
 
 ## 파일 구성
 | 파일 | 역할 |
 |------|------|
-| `index.html` | 🐯 스플래시 → 출석앱으로 리다이렉트 + 자동 로그인(`?p=`) + PWA 설정 |
-| `manifest.json` | 앱 이름 "전래동화 출석체크" · 아이콘 · standalone 표시 |
-| `sw.js` | 서비스워커(설치 가능하게 + 껍데기 캐시. 출석앱 데이터는 캐시 안 함) |
-| `icons/` | 🐯 호랑이 아이콘 (192 / 512 / apple-touch / favicon) |
+| `index.html` | 출석 앱 본체(UI+로직) + JSONP API 호출 + PWA |
+| `manifest.json` · `icons/` · `sw.js` | 홈 화면 앱 아이콘(🐯) · 설치 · 껍데기 캐시 |
 | `netlify.toml` | 빌드 없음, sw·manifest 캐시 최소화 |
+| `apps-script-doGet.gs.txt` | **Apps Script에 붙일 API doGet 코드**(아래 참고) |
+
+## 과정 API 주소 바꾸려면
+`index.html` 상단의 `const API = ".../exec"` 값만 수정. (과정마다 다른 exec)
+
+## 🔴 Apps Script 쪽 필수 세팅
+1. `apps-script-doGet.gs.txt` 내용으로 **기존 doGet 교체** → 새 버전으로 재배포
+   (getConfig/getFamilyByPhone/getLeaderboard/submitCheck 함수는 그대로 둠)
+2. 배포 액세스 권한 = **"모든 사용자(Anyone)"**
+3. 과정마다 별도 배포면 각 과정 스크립트에 같은 doGet 적용
 
 ## 배포 (GitHub → Netlify)
-1. 이 폴더 전체를 GitHub 레포 `nangdok-check` 에 올림
-2. Netlify → Add new site → Import an existing project → GitHub → `nangdok-check` 선택
-3. 빌드 명령/publish 는 `netlify.toml` 이 알아서 함(그냥 Deploy)
-4. 이후 수정은 GitHub 에서 커밋하면 Netlify 가 자동 재배포
-
-## 출석 앱 주소 바꾸려면
-`index.html` 안의 `EXEC` 값(`.../exec`)만 수정.
-
-## ⚠️ 필수 — Apps Script 접근 권한
-Apps Script 배포 설정에서 **"액세스 권한: 모든 사용자(Anyone)"** 여야
-외부(개인 Gmail) 사용자도 출석 체크가 가능합니다.
-
-## 참고 — doGet 의 XFrameOptions 는 이제 필수 아님
-리다이렉트 방식으로 바꾼 뒤로는 iframe을 안 쓰므로
-`.setXFrameOptionsMode(...ALLOWALL)` 는 **없어도 동작**합니다(넣어둬도 무해).
+GitHub `Longtail-team/nangdok-check` 에 커밋하면 Netlify 자동 재배포.
