@@ -352,23 +352,10 @@ let CFG=null, SCHED=null, FAM=[], active=0, LEADER={today:[],week:[]}, tab='toda
 
 /* ---------- init ---------- */
 window.addEventListener('load', ()=>{
-  call('getConfig').then(cfg=>{
-    CFG=cfg; SCHED=cfg.schedule;
-    if(cfg.mainColor) document.documentElement.style.setProperty('--main', cfg.mainColor);
-    document.getElementById('bTitle').textContent=cfg.title;
-    document.getElementById('bSub').textContent=cfg.subtitle;
-    document.getElementById('loginTitle').textContent=cfg.title;
-    renderStatic();
-  }).catch(()=>showRefresh());   // 필수 데이터 실패 → 새로고침 안내
-  loadLeaderboard();
-
   document.getElementById('reloadBtn').onclick=()=>location.reload();
-
-  // 자동 로그인 판별: ?p= 또는 저장된 연락처. 이제 최상위 페이지라 URL을 바로 읽음(동기).
-  const p0 = digits(getParam('p')) || localStorage_get('rd_phone');
-  if(p0){ doLogin(p0, true); } else { revealLogin(); }
   // 서비스워커 등록(홈 화면 설치 가능하게)
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+  boot();   // config + leaderboard + 자동로그인 을 서버 1회 호출(getBootstrap)로
 
   document.getElementById('loginBtn').onclick=()=>doLogin(document.getElementById('phone').value,false);
   document.getElementById('phone').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(document.getElementById('phone').value,false); });
@@ -402,25 +389,30 @@ function revealLogin(){                 // 로그인 폼 노출(스플래시 숨
 function doLogin(phone, silent){
   const btn=document.getElementById('loginBtn'), err=document.getElementById('loginErr');
   if(!silent){ btn.disabled=true; btn.textContent='확인 중…'; err.textContent=''; }
-  call('getFamilyByPhone', phone).then(res=>{
-    if(!res.ok){
-      if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent=res.error||'조회 실패'; }
-      else { localStorage_del('rd_phone'); revealLogin(); }   // 자동 로그인 실패 → 로그인 폼 표시
-      return;
-    }
-    __loginDecided=true;
-    const _sp=document.getElementById('splash'); if(_sp) _sp.classList.add('hidden');
-    PHONE=digits(phone); localStorage_set('rd_phone', phone);
-    rememberInUrl(phone);          // localStorage가 막혀도 새로고침 시 유지되도록 URL에도 기록
-    FAM=res.members; active=0;
-    document.getElementById('loginView').classList.add('hidden');
-    document.getElementById('appView').classList.remove('hidden');
-    document.getElementById('famNote').textContent=`한 연락처로 등록된 ${FAM.length}명이에요`;
-    renderAll();
-  }).catch(e=>{
-    if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent='오류: '+e.message; }
-    else { revealLogin(); showRefresh(); }   // 자동 로그인 네트워크 실패 → 로그인 폼 + 새로고침 안내
-  });
+  call('getFamilyByPhone', phone)
+    .then(res=> applyFamily(phone, res, silent))
+    .catch(e=>{
+      if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent='오류: '+e.message; }
+      else { revealLogin(); showRefresh(); }   // 자동 로그인 네트워크 실패 → 로그인 폼 + 새로고침 안내
+    });
+}
+// 가족 조회 결과 적용(자동/수동 로그인 + getBootstrap 공통)
+function applyFamily(phone, res, silent){
+  const btn=document.getElementById('loginBtn'), err=document.getElementById('loginErr');
+  if(!res || !res.ok){
+    if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent=(res&&res.error)||'조회 실패'; }
+    else { localStorage_del('rd_phone'); revealLogin(); }   // 자동 로그인 실패 → 로그인 폼 표시
+    return;
+  }
+  __loginDecided=true;
+  const _sp=document.getElementById('splash'); if(_sp) _sp.classList.add('hidden');
+  PHONE=digits(phone); localStorage_set('rd_phone', phone);
+  rememberInUrl(phone);          // localStorage가 막혀도 새로고침 시 유지되도록 URL에도 기록
+  FAM=res.members; active=0;
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  document.getElementById('famNote').textContent=`한 연락처로 등록된 ${FAM.length}명이에요`;
+  renderAll();
 }
 
 /* ---------- compute ---------- */
@@ -454,9 +446,38 @@ function renderStatic(){
 function showRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.remove('hidden'); }
 function hideRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.add('hidden'); }
 
+/* ---------- 부팅: 초기 데이터 로딩 ---------- */
+function applyConfig(cfg){
+  CFG=cfg; SCHED=cfg.schedule;
+  if(cfg.mainColor) document.documentElement.style.setProperty('--main', cfg.mainColor);
+  document.getElementById('bTitle').textContent=cfg.title;
+  document.getElementById('bSub').textContent=cfg.subtitle;
+  document.getElementById('loginTitle').textContent=cfg.title;
+  renderStatic();
+}
+function applyLeaderboard(res){ if(res && res.ok){ LEADER=res; renderBoard(); } }
+
 function loadLeaderboard(){
-  call('getLeaderboard').then(res=>{ if(res.ok){ LEADER=res; renderBoard(); } })
-    .catch(()=>showRefresh());   // 재시도 3회까지 다 실패 → 새로고침 안내
+  call('getLeaderboard').then(applyLeaderboard).catch(()=>showRefresh());   // 재시도 실패 → 새로고침 안내
+}
+
+// 빠른 경로: config+leaderboard+가족을 서버 1회(getBootstrap)로. 옛 서버면 자동 3-콜 폴백.
+function boot(){
+  const p0 = digits(getParam('p')) || localStorage_get('rd_phone');
+  call('getBootstrap', p0||'').then(b=>{
+    if(b && b.config){
+      applyConfig(b.config);
+      applyLeaderboard(b.leaderboard);
+      if(p0){ applyFamily(p0, b.family, true); } else { revealLogin(); }
+    } else {
+      legacyBoot(p0);   // 서버가 getBootstrap 미지원(옛 배포)
+    }
+  }).catch(()=> legacyBoot(p0));
+}
+function legacyBoot(p0){
+  call('getConfig').then(applyConfig).catch(()=>showRefresh());
+  loadLeaderboard();
+  if(p0){ doLogin(p0, true); } else { revealLogin(); }
 }
 function renderBoard(){
   const src = tab==='today'?LEADER.today:LEADER.week;
