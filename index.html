@@ -285,6 +285,22 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 일부만 로딩됐을 때 하단 새로고침 안내 -->
+<style>
+  #reloadBar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    z-index:60;display:flex;align-items:center;gap:12px;background:#33302A;color:#fff;
+    padding:11px 14px 11px 18px;border-radius:14px;box-shadow:0 8px 26px rgba(0,0,0,.24);
+    font-family:var(--kr);font-size:13px;line-height:1.3;max-width:calc(100vw - 24px)}
+  #reloadBar b{font-weight:600}
+  #reloadBar button{flex:0 0 auto;font-family:var(--kr);font-size:13px;font-weight:700;color:#33302A;
+    background:#fff;border:0;padding:8px 15px;border-radius:10px;cursor:pointer}
+  #reloadBar button:active{transform:scale(.96)}
+</style>
+<div id="reloadBar" class="hidden">
+  <span>일부만 불러왔어요. <b>새로고침</b>하면 전체가 떠요</span>
+  <button id="reloadBtn">새로고침</button>
+</div>
+
 <script>
 /* ---------- Apps Script 데이터 API (과정별 배포 주소) ---------- */
 const API = "https://script.google.com/a/macros/doingle.net/s/AKfycbx7437XL9U5fZ80NGm-61-ThGRGaVR0Bew4rPF63ogcNxRjlgxsr_3fCemt2OL_uuMwyA/exec";
@@ -343,8 +359,10 @@ window.addEventListener('load', ()=>{
     document.getElementById('bSub').textContent=cfg.subtitle;
     document.getElementById('loginTitle').textContent=cfg.title;
     renderStatic();
-  });
+  }).catch(()=>showRefresh());   // 필수 데이터 실패 → 새로고침 안내
   loadLeaderboard();
+
+  document.getElementById('reloadBtn').onclick=()=>location.reload();
 
   // 자동 로그인 판별: ?p= 또는 저장된 연락처. 이제 최상위 페이지라 URL을 바로 읽음(동기).
   const p0 = digits(getParam('p')) || localStorage_get('rd_phone');
@@ -401,7 +419,7 @@ function doLogin(phone, silent){
     renderAll();
   }).catch(e=>{
     if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent='오류: '+e.message; }
-    else revealLogin();            // 자동 로그인 중 오류 → 로그인 폼 표시
+    else { revealLogin(); showRefresh(); }   // 자동 로그인 네트워크 실패 → 로그인 폼 + 새로고침 안내
   });
 }
 
@@ -432,8 +450,13 @@ function renderStatic(){
   }
 }
 
+/* ---------- 일부만 로딩 시 하단 안내 ---------- */
+function showRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.remove('hidden'); }
+function hideRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.add('hidden'); }
+
 function loadLeaderboard(){
-  call('getLeaderboard').then(res=>{ if(res.ok){ LEADER=res; renderBoard(); } });
+  call('getLeaderboard').then(res=>{ if(res.ok){ LEADER=res; renderBoard(); } })
+    .catch(()=>showRefresh());   // 재시도 3회까지 다 실패 → 새로고침 안내
 }
 function renderBoard(){
   const src = tab==='today'?LEADER.today:LEADER.week;
