@@ -37,6 +37,7 @@ function doGet(e) {
     if      (fn === 'getConfig')        out = getConfig();
     else if (fn === 'getFamilyByPhone') out = getFamilyByPhone(p.a0);
     else if (fn === 'getLeaderboard')   out = getLeaderboard();
+    else if (fn === 'getBootstrap')     out = getBootstrap(p.a0);
     else if (fn === 'submitCheck')      out = submitCheck(Number(p.a0), Number(p.a1), p.a2 === 'true');
     else                                out = { ok:false, error:'알 수 없는 요청: ' + fn };
   } catch (err) {
@@ -62,6 +63,17 @@ function getConfig() {
     }
   } catch (e) {}
   return { title: title, subtitle: WEBAPP_COURSE_SUBTITLE, mainColor: color, schedule: sched };
+}
+
+/** 초기 데이터 한 번에 묶어서 반환 → 화면 로딩 속도↑ (서버 왕복 3→1) */
+function getBootstrap(phoneInput) {
+  var out = { ok: true };
+  try { out.config = getConfig(); } catch (e) { out.config = null; }
+  try { out.leaderboard = getLeaderboard(); } catch (e) { out.leaderboard = { ok: false }; }
+  if (phoneInput && String(phoneInput).length >= 8) {
+    try { out.family = getFamilyByPhone(phoneInput); } catch (e) { out.family = { ok: false, error: String(e) }; }
+  }
+  return out;
 }
 
 // =================================================================
