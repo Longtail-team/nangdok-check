@@ -73,7 +73,7 @@
   .sec-head h2{font-size:16px;font-weight:600;letter-spacing:-.01em}
   .sec-head .note{font-size:12px;color:var(--ink-faint);font-weight:500;margin-top:1px}
 
-  .tabs{display:flex;gap:6px;background:var(--paper);border-radius:14px;padding:4px;margin:2px 8px 4px}
+  .tabs{display:flex;gap:6px;background:var(--paper);border-radius:14px;padding:4px;margin:14px 8px 4px}
   .tabs button{flex:1;font-family:var(--kr);font-size:13px;font-weight:600;color:var(--ink-soft);background:transparent;border:0;padding:9px 6px;border-radius:11px;cursor:pointer;transition:.14s;line-height:1.15}
   .tabs button small{display:block;font-size:10.5px;font-weight:500;color:var(--ink-faint);margin-top:2px}
   .tabs button.on{background:var(--card);color:var(--main-dk);box-shadow:0 2px 6px rgba(80,70,50,.1)}
@@ -139,6 +139,7 @@
   .board-card{padding:18px}
   .hint{font-size:12px;color:var(--ink-soft);background:var(--amber-soft);border-radius:11px;padding:9px 12px;margin-bottom:12px}
   .hint b{color:#B9822A}
+  .rlink{color:#B9822A;text-decoration:underline;cursor:pointer;font-weight:600}
   .bc-legend{display:flex;gap:12px;font-size:11px;color:var(--ink-faint);flex-wrap:wrap;margin-bottom:14px}
   .lg-sw{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:5px;margin-right:5px;vertical-align:-3px;font-size:10px}
   .lg-done{background:var(--main-fill)} .lg-miss{background:#fff;border:1.5px dashed #D9C9A8} .lg-today{background:#fff;border:2px solid var(--amber)} .lg-up{background:var(--up)}
@@ -205,8 +206,8 @@
   <header class="banner">
     <div class="b-row">
       <div>
-        <div class="b-title" id="bTitle">우리 가족 낭독 출석</div>
-        <div class="b-sub" id="bSub">매일 낭독하고 도장 모으기 🌱</div>
+        <div class="b-title" id="bTitle">낭독스쿨 출석 페이지</div>
+        <div class="b-sub" id="bSub">매일 낭독하고 출석체크 하기 🌱</div>
       </div>
     </div>
     <div class="b-today" id="today"></div>
@@ -214,7 +215,7 @@
 
   <section>
     <div class="sec-head"><span class="chip">🏆</span>
-      <div><h2>출석 리더보드</h2><div class="note">우수 멤버 인스타 구경하며 동기부여 받아요</div></div>
+      <div><h2>출석 리더보드</h2><div class="note">우수 멤버 인스타 구경하며 동기부여 받아요.<br>인스타 아이콘을 누르면 해당 멤버 계정을 방문할 수 있어요.</div></div>
     </div>
     <div class="card">
       <div class="tabs" id="tabs">
@@ -236,7 +237,7 @@
 
   <section>
     <div class="sec-head"><span class="chip">✍️</span>
-      <div><h2 id="meTitle">낭독 체크</h2></div>
+      <div><h2 id="meTitle">오늘 출석</h2></div>
     </div>
     <div class="card me-card">
       <div class="me-top">
@@ -261,13 +262,12 @@
 
   <section>
     <div class="sec-head"><span class="chip">☑️</span>
-      <div><h2>출석 도장판</h2><div class="note">지난 날도 탭해서 채울 수 있어요</div></div>
+      <div><h2>출석 체크</h2></div>
     </div>
     <div class="card board-card">
-      <div class="hint">완료한 날은 <b>그 날짜의 도장</b>이 찍혀요 🌱🌷⭐. 밀린 날은 그 칸을 눌러 채우면 됩니다.</div>
+      <div class="hint">완료한 날을 체크하면 <b>아이콘</b>이 표시돼요 🌱🌷⭐.<br>밀린 날은 그 칸을 눌러 채우면 됩니다.<br>출석 체크·이름 변경은 최대 5분 내 반영돼요. 안 보이면 <span class="rlink" onclick="location.reload()">새로고침</span></div>
       <div class="bc-legend">
         <span><i class="lg-sw lg-done">🌱</i>완료</span>
-        <span><i class="lg-sw lg-miss"></i>밀림(탭)</span>
         <span><i class="lg-sw lg-today"></i>오늘</span>
         <span><i class="lg-sw lg-up"></i>예정</span>
       </div>
@@ -453,9 +453,10 @@ function hideRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.cl
 function applyConfig(cfg){
   CFG=cfg; SCHED=cfg.schedule;
   if(cfg.mainColor) document.documentElement.style.setProperty('--main', cfg.mainColor);
-  document.getElementById('bTitle').textContent=cfg.title;
-  document.getElementById('bSub').textContent=cfg.subtitle;
-  document.getElementById('loginTitle').textContent=cfg.title;
+  const fullTitle='낭독스쿨 '+String(cfg.title||'').replace(/\s*출석\s*페이지$/,'').trim()+' 출석 페이지';
+  document.getElementById('bTitle').textContent=fullTitle;
+  document.getElementById('bSub').textContent='매일 낭독하고 출석체크 하기 🌱';
+  document.getElementById('loginTitle').textContent=fullTitle;
   renderStatic();
 }
 function applyLeaderboard(res){ if(res && res.ok){ LEADER=res; renderBoard(); } }
@@ -490,7 +491,7 @@ function renderBoard(){
   const list=src.slice(0,shown);
   box.innerHTML=list.map((m,i)=>{
     const badge = m.extra>0 ? `<span class="fambadge">+${m.extra}</span>` : '';
-    const nameCell = `<div class="lwho"><div class="ln">${esc(m.display)}${badge}</div><div class="lh">@${esc(m.handle)}</div></div>`;
+    const nameCell = `<div class="lwho"><div class="ln">${esc(m.display)}${badge}</div></div>`;
     if(tab==='today'){
       return `<a class="lrow feed" href="${m.url}" target="_blank" rel="noopener">
         ${nameCell}
@@ -519,7 +520,7 @@ function renderFam(){
 
 function renderDetail(){
   const p=FAM[active], s=calc(p), today=SCHED.todayIndex||0;
-  document.getElementById('meTitle').textContent=`${p.name} 낭독 체크`;
+  document.getElementById('meTitle').textContent='오늘 출석';
   document.getElementById('msName').textContent=p.name;
   document.getElementById('msStreak').textContent=`🌱 ${s.streak}일 연속`;
   document.getElementById('pctTxt').textContent=`${s.done} / ${s.total}일 · ${s.pct}%`;
@@ -530,11 +531,11 @@ function renderDetail(){
 
   const stamp=document.getElementById('stamp');
   stamp.disabled = !today;
-  if(!today){ stamp.classList.remove('done'); stamp.innerHTML='개강<br>전'; document.getElementById('msMsg').textContent='개강일부터 도장을 찍을 수 있어요.'; }
+  if(!today){ stamp.classList.remove('done'); stamp.innerHTML='개강<br>전'; document.getElementById('msMsg').textContent='개강일부터 출석체크 할 수 있어요.'; }
   else if(s.todayDone){ stamp.classList.add('done'); stamp.innerHTML=`<span class="big">${emojiFor(today)}</span>`;
-    document.getElementById('msMsg').innerHTML=`오늘의 도장 <b>${emojiFor(today)}</b> 획득! ${s.streak}일째예요.`; }
-  else{ stamp.classList.remove('done'); stamp.innerHTML='오늘<br>도장 찍기';
-    document.getElementById('msMsg').textContent = s.miss>0?`밀린 날 ${s.miss}일은 도장판에서 채울 수 있어요.`:'도장을 눌러 오늘 출석을 남겨요.'; }
+    document.getElementById('msMsg').innerHTML=`오늘 출석체크 완료 <b>${emojiFor(today)}</b>! ${s.streak}일째예요.`; }
+  else{ stamp.classList.remove('done'); stamp.innerHTML='오늘<br>출석체크';
+    document.getElementById('msMsg').textContent = s.miss>0?`${s.miss}일 밀렸어요. 밀린 날도 출석체크 할 수 있어요.`:'오늘 칸을 눌러 출석체크 해요.'; }
 
   const total=s.total, weeks=Math.ceil(total/5), g=document.getElementById('grid'); g.innerHTML='';
   const weekMax = today ? Math.min(total, Math.ceil(today/5)*5) : 0;   // 이번 주 마지막 일차까지 체크 허용
