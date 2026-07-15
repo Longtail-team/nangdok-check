@@ -141,7 +141,7 @@
   .hint b{color:#B9822A}
   .rlink{color:#B9822A;text-decoration:underline;cursor:pointer;font-weight:600}
   .bc-legend{display:flex;gap:12px;font-size:11px;color:var(--ink-faint);flex-wrap:wrap;margin-bottom:14px}
-  .lg-sw{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:5px;margin-right:5px;vertical-align:-3px;font-size:10px}
+  .lg-sw{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:5px;margin-right:5px;vertical-align:-3px;font-size:10px;line-height:1}
   .lg-done{background:var(--main-fill)} .lg-miss{background:#fff;border:1.5px dashed #D9C9A8} .lg-today{background:#fff;border:2px solid var(--amber)} .lg-up{background:var(--up)}
   .grid{display:flex;flex-direction:column;gap:7px}
   .wkline{display:grid;grid-template-columns:30px repeat(5,1fr);align-items:center;gap:7px}
@@ -265,7 +265,7 @@
       <div><h2>출석 체크</h2></div>
     </div>
     <div class="card board-card">
-      <div class="hint">완료한 날을 체크하면 <b>아이콘</b>이 표시돼요 🌱🌷⭐.<br>밀린 날은 그 칸을 눌러 채우면 됩니다.<br>출석 체크·이름 변경은 최대 5분 내 반영돼요. 안 보이면 <span class="rlink" onclick="location.reload()">새로고침</span></div>
+      <div class="hint">완료한 날을 체크하면 <b>아이콘</b>이 표시돼요 🌱🌷⭐.<br>밀린 날은 그 칸을 눌러 채우면 됩니다.<br>반영까지 최대 5분 · 안 보이면 <span class="rlink" onclick="location.reload()">새로고침</span></div>
       <div class="bc-legend">
         <span><i class="lg-sw lg-done">🌱</i>완료</span>
         <span><i class="lg-sw lg-today"></i>오늘</span>
