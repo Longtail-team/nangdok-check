@@ -186,7 +186,7 @@
 <div id="splash">
   <div class="ico">🐯</div>
   <div class="bar"><i></i></div>
-  <div class="txt">전래동화 출석체크 여는 중…</div>
+  <div class="txt">출석 페이지를 불러오고 있어요…</div>
 </div>
 
 <!-- LOGIN -->
@@ -460,7 +460,9 @@ function hideRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.cl
 function applyConfig(cfg){
   CFG=cfg; SCHED=cfg.schedule;
   if(cfg.mainColor) document.documentElement.style.setProperty('--main', cfg.mainColor);
-  const fullTitle='낭독스쿨 '+String(cfg.title||'').replace(/\s*출석\s*페이지$/,'').trim()+' 출석 페이지';
+  const course=String(cfg.title||'').replace(/\s*출석\s*페이지$/,'').trim();
+  const fullTitle='낭독스쿨 '+course+' 출석 페이지';
+  try{ if(course) localStorage_set('rd_course', course); }catch(e){}   // 다음 로딩 스플래시 개인화용
   document.getElementById('bTitle').textContent=fullTitle;
   document.getElementById('bSub').textContent='매일 낭독하고 출석체크 하기 🌱';
   document.getElementById('loginTitle').textContent=fullTitle;
@@ -474,6 +476,7 @@ function loadLeaderboard(){
 
 // 빠른 경로: config+leaderboard+가족을 서버 1회(getBootstrap)로. 옛 서버면 자동 3-콜 폴백.
 function boot(){
+  try{ const c=localStorage_get('rd_course'); if(c){ const st=document.querySelector('#splash .txt'); if(st) st.textContent=c+' 출석 페이지를 불러오고 있어요…'; } }catch(e){}
   const p0 = digits(getParam('p')) || localStorage_get('rd_phone');
   call('getBootstrap', p0||'').then(b=>{
     if(b && b.config){
