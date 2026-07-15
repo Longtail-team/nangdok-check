@@ -149,8 +149,10 @@ function submitCheck(rowIndex, dayIndex, checked) {
   try {
     lock.tryLock(10000);
     const sched = _getSchedule_();
-    if (sched.todayIndex && dayIndex > sched.todayIndex) {
-      return { ok: false, error: '아직 오지 않은 날은 체크할 수 없어요.' };
+    // 이번 주(월~금 5일) 전체까지 허용: 상한 = 이번 주 마지막 일차. (다음 주차는 잠금)
+    const weekMax = sched.todayIndex ? Math.min(sched.total || dayIndex, Math.ceil(sched.todayIndex / 5) * 5) : 0;
+    if (sched.todayIndex && dayIndex > weekMax) {
+      return { ok: false, error: '이번 주까지만 체크할 수 있어요.' };
     }
     const tsheet = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID).getSheetByName(TARGET_SHEET_NAME);
     const col = COLUMN_MAP.TARGET.START_ATTENDANCE - 1 + dayIndex;   // 7 + dayIndex
@@ -200,7 +202,7 @@ function getLeaderboard() {
     const values = tsheet.getRange(3, 1, lastRow - 2, width).getValues();
 
     // ── 인스타 핸들로 가족 묶기 ──
-    const fam = {};   // handle → { handle, url, penName, memberCount, todayAny, recentSum }
+    const fam = {};   // handle → { handle, url, repParenRaw, repPlainRaw, memberCount, todayAny, recentSum }
     values.forEach(row => {
       const name = String(row[COLUMN_MAP.TARGET.NAME - 1] || '').trim();
       const ig = String(row[COLUMN_MAP.TARGET.INSTAGRAM - 1] || '').trim();
@@ -210,12 +212,14 @@ function getLeaderboard() {
       const checks = row.slice(startCol - 1, startCol - 1 + checkboxCount);
 
       let g = fam[handle];
-      if (!g) { g = fam[handle] = { handle: handle, url: _igUrl(ig), penName: '', memberCount: 0, todayAny: false, recentSum: 0 }; }
+      if (!g) { g = fam[handle] = { handle: handle, url: _igUrl(ig), repParenRaw: '', repPlainRaw: '', memberCount: 0, todayAny: false, recentSum: 0 }; }
       g.memberCount++;
 
-      // 대표 필명: 괄호 안 필명이 있는 행(보통 부모)을 우선 사용
-      const pen = _penNameOnly_(name);
-      if (pen && !g.penName) g.penName = pen;
+      // 대표 이름: 인증시트 B열 이름을 그대로 노출(본인이 직접 고치면 즉시 반영).
+      // 괄호 있는 행(보통 부모)을 대표로 우선 채택. 표시는 괄호 앞 이름만.
+      const parenAt = name.search(/[(（]/);
+      if (parenAt > 0) { if (!g.repParenRaw) g.repParenRaw = name; }
+      else             { if (!g.repPlainRaw) g.repPlainRaw = name; }
 
       if (todayIdx >= 1 && checks[todayIdx - 1] === true) g.todayAny = true;
 
@@ -230,7 +234,7 @@ function getLeaderboard() {
       const denom = windowDays * g.memberCount;                 // 가족 전체 분모
       const avgRate = denom > 0 ? Math.round((g.recentSum / denom) * 100) : 0;   // 가족 평균 달성율(%)
       const item = {
-        display: g.penName || g.handle,                          // 실명 대신 필명/핸들
+        display: _familyName_(g.repParenRaw || g.repPlainRaw) || g.handle,   // 인증시트 B열 이름(괄호 앞), 없으면 핸들
         handle: g.handle,
         url: g.url,
         extra: g.memberCount > 1 ? (g.memberCount - 1) : 0,      // +N 배지 (대표 외 인원)
@@ -386,10 +390,10 @@ function _igUrl(v) {
   const h = _igHandle(v);
   return h ? ('https://instagram.com/' + h) : '';
 }
-/** 가족 화면용: "김애지(my.morning.glory)" → "김애지", "리아" → "리아" */
+/** 이름 표시용: "김애지(my.morning.glory)" → "김애지", "리아" → "리아" (전각 괄호（） 포함) */
 function _familyName_(raw) {
   const s = String(raw || '').trim();
-  const i = s.indexOf('(');
+  const i = s.search(/[(（]/);
   return (i > 0 ? s.slice(0, i) : s).trim();
 }
 /** 리더보드(공개)용: 괄호 안 필명 우선, 없으면 인스타 핸들 (실명 노출 방지) */
