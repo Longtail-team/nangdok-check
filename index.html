@@ -430,7 +430,7 @@ function revealLogin(){                 // 로그인 폼 노출(스플래시 숨
   if(__loginDecided) return; __loginDecided=true;
   const s=document.getElementById('splash'); if(s) s.classList.add('hidden');
   document.getElementById('loginView').classList.remove('hidden');
-  maybeShowNotice();
+  // 공지 팝업은 여기(로그인 화면)선 안 띄움 → 로그인/자동로그인 후 applyFamily()에서만 표시(맥락상 회원 대상)
 }
 function doLogin(phone, silent){
   const btn=document.getElementById('loginBtn'), err=document.getElementById('loginErr');
