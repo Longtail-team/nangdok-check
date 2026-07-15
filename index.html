@@ -348,7 +348,7 @@ function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.
 
 const BASE_EMOJI='💜';   // 템플릿 기본(과정 전용 이모지 없을 때 = 컬러 하트)
 // ── 과정별 "주차 이모지": 새 과정이면 이 배열만 교체. 비우면('') 그 주는 기본 하트. (이번 전래동화 1기용) ──
-const WEEK_EMOJIS=['🐯','🐅','🧑‍🧒‍🧒','','🐮','🐦','🐸','🪭','🐁','','🐶','🪄','🐰','🐯','🧄','🪓','👺','🔔','🪷','😈','👶','🦊','🍃','🐚'];
+const WEEK_EMOJIS=['🐯','🐅','👦','','🐮','🐦','🐸','🪭','🐁','✅','🐶','🪄','🐰','🐯','🧄','🪓','👺','🔔','🪷','😈','👶','🦊','🍃','🐚'];
 function emojiFor(d){
   if(!d || d<1) return BASE_EMOJI;
   const wk=Math.ceil(d/5);                            // 주차 (평일 5일 = 1주)
