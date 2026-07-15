@@ -305,47 +305,34 @@
   <button id="reloadBtn">새로고침</button>
 </div>
 
-<!-- 공지 팝업 (설정탭 B8=제목 / B9=내용, 둘 다 비면 안 뜸) — 한지 카드 -->
+<!-- 공지 팝업 (설정탭 B11=제목 / B12=내용, 둘 다 비면 안 뜸) -->
 <style>
   #noticeMask{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
-    padding:24px;background:rgba(42,37,28,.44);opacity:0;transition:opacity .22s;
-    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+    padding:24px;background:rgba(40,36,28,.38);opacity:0;transition:opacity .2s}
   #noticeMask.show{opacity:1}
-  #noticeMask .nc{width:100%;max-width:340px;max-height:calc(100vh - 56px);display:flex;flex-direction:column;
-    background-color:var(--cream);border:1px solid var(--main-line);border-radius:20px;overflow:hidden;
-    box-shadow:0 20px 54px rgba(60,48,26,.30),inset 0 0 0 1px rgba(255,255,255,.55);
-    /* 한지 질감: 은은한 섬유 결 (이미지 없이 CSS로) */
-    background-image:
-      repeating-linear-gradient(90deg,rgba(120,100,60,.035) 0 1px,transparent 1px 3px),
-      repeating-linear-gradient(0deg,rgba(120,100,60,.022) 0 1px,transparent 1px 4px),
-      radial-gradient(120% 90% at 28% 12%,rgba(160,140,90,.07),transparent 60%);
-    transform:translateY(14px) scale(.97);transition:transform .26s cubic-bezier(.2,1,.3,1)}
+  #noticeMask .nc{width:100%;max-width:330px;max-height:calc(100vh - 56px);display:flex;flex-direction:column;
+    background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;
+    box-shadow:0 16px 44px rgba(60,50,30,.18);
+    transform:translateY(12px) scale(.98);transition:transform .24s cubic-bezier(.2,1,.3,1)}
   #noticeMask.show .nc{transform:none}
-  .nc-head{display:flex;align-items:center;gap:10px;padding:17px 20px 13px;
-    border-bottom:1px solid color-mix(in srgb,var(--main) 22%,#e6ddca)}
-  .nc-ic{width:34px;height:34px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;
-    font-size:18px;background:var(--main-soft)}
-  .nc-title{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--main-dk);line-height:1.3}
-  .nc-body{padding:16px 20px 6px;overflow-y:auto;font-size:14px;line-height:1.65;color:var(--ink);
+  .nc-head{display:flex;align-items:center;gap:8px;padding:22px 22px 0}
+  .nc-ic{font-size:19px;line-height:1}
+  .nc-title{font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.3}
+  .nc-body{padding:11px 22px 20px;overflow-y:auto;font-size:14px;line-height:1.65;color:var(--ink-soft);
     white-space:pre-wrap;word-break:break-word}
   .nc-body:empty{padding:0}
-  .nc-foot{padding:12px 20px 18px;display:flex;flex-direction:column;align-items:stretch;gap:2px}
-  .nc-ok{width:100%;font-family:var(--kr);font-size:15px;font-weight:700;color:#fff;background:var(--main);
-    border:0;padding:13px;border-radius:14px;cursor:pointer;transition:.14s}
-  .nc-ok:hover{background:var(--main-dk)}
+  .nc-body a{color:var(--main-dk);text-decoration:underline;font-weight:600;word-break:break-all}
+  .nc-foot{padding:0 20px 18px}
+  .nc-ok{width:100%;font-family:var(--kr);font-size:14.5px;font-weight:600;color:var(--main-dk);
+    background:var(--main-soft);border:0;padding:12px;border-radius:13px;cursor:pointer;transition:background .14s,transform .1s}
+  .nc-ok:hover{background:var(--main-fill)}
   .nc-ok:active{transform:scale(.98)}
-  .nc-never{align-self:center;margin-top:6px;font-family:var(--kr);font-size:12px;color:var(--ink-faint);
-    background:none;border:0;text-decoration:underline;cursor:pointer;padding:6px}
-  .nc-never:hover{color:var(--ink-soft)}
 </style>
 <div id="noticeMask" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ncTitle">
   <div class="nc">
     <div class="nc-head"><span class="nc-ic">📢</span><div class="nc-title" id="ncTitle">공지</div></div>
     <div class="nc-body" id="ncBody"></div>
-    <div class="nc-foot">
-      <button class="nc-ok" id="ncOk">확인</button>
-      <button class="nc-never" id="ncNever">다시 보지 않기</button>
-    </div>
+    <div class="nc-foot"><button class="nc-ok" id="ncOk">확인</button></div>
   </div>
 </div>
 
@@ -409,8 +396,7 @@ let NOTICE=null, __noticeShown=false;
 /* ---------- init ---------- */
 window.addEventListener('load', ()=>{
   document.getElementById('reloadBtn').onclick=()=>location.reload();
-  document.getElementById('ncOk').onclick=()=>closeNotice(false);
-  document.getElementById('ncNever').onclick=()=>closeNotice(true);
+  document.getElementById('ncOk').onclick=()=>closeNotice(true);
   document.getElementById('noticeMask').addEventListener('click',e=>{ if(e.target.id==='noticeMask') closeNotice(false); });
   // 서비스워커 등록(홈 화면 설치 가능하게)
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -507,22 +493,33 @@ function renderStatic(){
 function showRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.remove('hidden'); }
 function hideRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.add('hidden'); }
 
-/* ---------- 공지 팝업 (설정탭 B8=제목 / B9=내용) ---------- */
-// 내용이 바뀌면 키가 달라져 "다시 보지 않기" 이후에도 새 공지는 다시 뜸.
-function _noticeKey(n){ const s=(n.title||'')+''+(n.body||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return 'n'+h; }
+/* ---------- 공지 팝업 (설정탭 B11=제목 / B12=내용) ---------- */
+// "확인"=그 공지를 오늘 하루만 숨김. 영구 차단 없음 → 내용 바뀐 새 공지는 전원에게 무조건 다시 뜸.
+function _noticeKey(n){ const s=(n.title||'')+''+(n.body||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; }
+  const t=new Date(), day=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate();
+  return 'n'+h+'@'+day;   // 내용해시+날짜 → 같은 공지는 그날 하루만 숨김, 내용 바뀌면 새 키(새 공지 무조건 표시)
+}
+// 본문 속 URL(http(s)://… / www.…)만 안전하게 링크로. 그 외 텍스트는 HTML 이스케이프(XSS 방지).
+function _noticeHtml(body){
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let html=esc(body);
+  html=html.replace(/(https?:\/\/[^\s<]+)/g, u=>'<a href="'+u+'" target="_blank" rel="noopener">'+u+'</a>');
+  html=html.replace(/(^|[\s(])(www\.[^\s<]+)/g, (m,pre,u)=>pre+'<a href="https://'+u+'" target="_blank" rel="noopener">'+u+'</a>');
+  return html;
+}
 function maybeShowNotice(){
   if(__noticeShown || !NOTICE) return;
   const key=_noticeKey(NOTICE);
-  if(localStorage_get('rd_notice_off')===key) return;   // 이 내용은 이미 "다시 보지 않기" 처리됨
+  if(localStorage_get('rd_notice_seen')===key) return;   // 오늘 이미 확인한 같은 공지 → 안 뜸
   __noticeShown=true; NOTICE._key=key;
   document.getElementById('ncTitle').textContent = NOTICE.title || '공지';
-  document.getElementById('ncBody').textContent  = NOTICE.body || '';   // textContent → 줄바꿈 유지·XSS 안전
+  document.getElementById('ncBody').innerHTML = _noticeHtml(NOTICE.body || '');   // 링크 자동연결(+HTML 이스케이프)
   const mask=document.getElementById('noticeMask');
   mask.classList.remove('hidden');
   requestAnimationFrame(()=>mask.classList.add('show'));
 }
-function closeNotice(never){
-  if(never && NOTICE && NOTICE._key) localStorage_set('rd_notice_off', NOTICE._key);
+function closeNotice(persist){
+  if(persist && NOTICE && NOTICE._key) localStorage_set('rd_notice_seen', NOTICE._key);   // 확인=오늘 하루 숨김(바깥 탭 클릭은 유지 안 함)
   const mask=document.getElementById('noticeMask');
   mask.classList.remove('show');
   setTimeout(()=>mask.classList.add('hidden'), 240);
