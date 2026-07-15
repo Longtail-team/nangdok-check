@@ -494,10 +494,9 @@ function showRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.cl
 function hideRefresh(){ const b=document.getElementById('reloadBar'); if(b) b.classList.add('hidden'); }
 
 /* ---------- 공지 팝업 (설정탭 B11=제목 / B12=내용) ---------- */
-// "확인"=그 공지를 오늘 하루만 숨김. 영구 차단 없음 → 내용 바뀐 새 공지는 전원에게 무조건 다시 뜸.
+// "확인"=그 공지는 다시 안 봄(전원 1회 노출). 내용 바뀐 새 공지만 강제 팝업. (바깥탭 클릭은 저장 안 함 → 다음에 또 뜸)
 function _noticeKey(n){ const s=(n.title||'')+''+(n.body||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; }
-  const t=new Date(), day=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate();
-  return 'n'+h+'@'+day;   // 내용해시+날짜 → 같은 공지는 그날 하루만 숨김, 내용 바뀌면 새 키(새 공지 무조건 표시)
+  return 'n'+h;   // 내용 해시만 → "확인"하면 그 공지는 다시 안 뜸. 내용 바뀐 새 공지는 새 키라 무조건 다시 뜸
 }
 // 본문 속 URL(http(s)://… / www.…)만 안전하게 링크로. 그 외 텍스트는 HTML 이스케이프(XSS 방지).
 function _noticeHtml(body){
@@ -510,7 +509,7 @@ function _noticeHtml(body){
 function maybeShowNotice(){
   if(__noticeShown || !NOTICE) return;
   const key=_noticeKey(NOTICE);
-  if(localStorage_get('rd_notice_seen')===key) return;   // 오늘 이미 확인한 같은 공지 → 안 뜸
+  if(localStorage_get('rd_notice_seen')===key) return;   // 이미 "확인"한 같은 공지 → 다시 안 뜸
   __noticeShown=true; NOTICE._key=key;
   document.getElementById('ncTitle').textContent = NOTICE.title || '공지';
   document.getElementById('ncBody').innerHTML = _noticeHtml(NOTICE.body || '');   // 링크 자동연결(+HTML 이스케이프)
@@ -519,7 +518,7 @@ function maybeShowNotice(){
   requestAnimationFrame(()=>mask.classList.add('show'));
 }
 function closeNotice(persist){
-  if(persist && NOTICE && NOTICE._key) localStorage_set('rd_notice_seen', NOTICE._key);   // 확인=오늘 하루 숨김(바깥 탭 클릭은 유지 안 함)
+  if(persist && NOTICE && NOTICE._key) localStorage_set('rd_notice_seen', NOTICE._key);   // 확인=이 공지 다시 안 봄(내용해시 저장). 바깥탭 클릭은 저장 안 함 → 다음에 또 뜸
   const mask=document.getElementById('noticeMask');
   mask.classList.remove('show');
   setTimeout(()=>mask.classList.add('hidden'), 240);
