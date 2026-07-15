@@ -265,9 +265,9 @@
       <div><h2>출석 체크</h2></div>
     </div>
     <div class="card board-card">
-      <div class="hint">완료한 날을 체크하면 <b>아이콘</b>이 표시돼요 🌱🌷⭐.<br>밀린 날은 그 칸을 눌러 채우면 됩니다.<br>반영까지 최대 5분 · 안 보이면 <span class="rlink" onclick="location.reload()">새로고침</span></div>
+      <div class="hint">완료한 날을 체크하면 <b>아이콘</b>이 표시돼요 🐯🌞🐰.<br>밀린 날은 그 칸을 눌러 채우면 됩니다.<br>반영까지 최대 5분 · 안 보이면 <span class="rlink" onclick="location.reload()">새로고침</span></div>
       <div class="bc-legend">
-        <span><i class="lg-sw lg-done">🌱</i>완료</span>
+        <span><i class="lg-sw lg-done"></i>완료</span>
         <span><i class="lg-sw lg-today"></i>오늘</span>
         <span><i class="lg-sw lg-up"></i>예정</span>
       </div>
@@ -346,8 +346,15 @@ function getParam(k){ try{ return new URLSearchParams(location.search).get(k)||'
 function digits(s){ return String(s||'').replace(/[^0-9]/g,''); }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
 
-const DAILY=['🌱','🌿','🍀','☘️','🌷','🌸','🌼','🌻','🌺','🌹','🪻','🍎','🍓','🫐','🍯','🐣','🦋','🐝','⭐','✨','🌟','🌈','☀️','🌞','🍃','🌾','🎈','🎨','📖','🎵'];
-const emojiFor=d=>DAILY[(d-1)%DAILY.length];
+const BASE_EMOJI='💜';   // 템플릿 기본(과정 전용 이모지 없을 때 = 컬러 하트)
+// ── 과정별 "주차 이모지": 새 과정이면 이 배열만 교체. 비우면('') 그 주는 기본 하트. (이번 전래동화 1기용) ──
+const WEEK_EMOJIS=['🐯','🐅','🧑‍🧒‍🧒','','🐮','🐦','🐸','🪭','🐁','','🐶','🪄','🐰','🐯','🧄','🪓','👺','🔔','🪷','😈','👶','🦊','🍃','🐚'];
+function emojiFor(d){
+  if(!d || d<1) return BASE_EMOJI;
+  const wk=Math.ceil(d/5);                            // 주차 (평일 5일 = 1주)
+  if(wk===4) return ((d-1)%5)%2===0 ? '🌞' : '🌛';   // 4주(해와 달이 된 오누이): 해·달 번갈아
+  return WEEK_EMOJIS[wk-1] || BASE_EMOJI;             // 미정(10주 반쪽이 등)·범위밖 → 기본 하트
+}
 const igSvg=`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="#fff" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="#fff"/></svg>`;
 
 /* ---------- state ---------- */
