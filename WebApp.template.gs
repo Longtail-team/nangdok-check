@@ -7,6 +7,7 @@
  * ── 새 과정 배포 체크리스트 ─────────────────────────────────────
  *  1) 이 코드를 과정 프로젝트에 추가(기존 함수들 재사용).
  *  2) 원본 '설정' 탭 채우기:  B4=과정명 / B5=개강일(날짜) / B6=기간(주) / B7=메인색상(hex, 선택)
+ *                          B11=공지 제목 / B12=공지 내용 (선택 — 채우면 팝업, 비우면 안 뜸)
  *  3) 인증시트 D2 = 체크박스 수(=총 학습일). 12주→60, 24주→120.
  *  4) 배포 → 액세스 "모든 사용자(Anyone)" → 새 버전 배포.
  *  5) Netlify 프론트(index.html)의 const API 를 이 과정 exec 주소로.
@@ -20,7 +21,7 @@
 // ⚙️ 웹앱 설정 — 실제 값에 맞게 확인하세요
 // =================================================================
 const WEBAPP_SOURCE_SHEET_NAME   = '설문지 응답 시트1'; // 원본 신청서 "응답 탭" 이름 (기존 01 파일 SOURCE_SHEET_NAME과 동일)
-const WEBAPP_SETTINGS_SHEET_NAME = '설정';           // 원본시트 설정 탭: B4=과정명, B5=개강일, B6=기간(주), B7=메인색상(hex)
+const WEBAPP_SETTINGS_SHEET_NAME = '설정';           // 원본시트 설정 탭: B4=과정명, B5=개강일, B6=기간(주), B7=메인색상(hex), B11=공지제목, B12=공지내용
 const WEBAPP_COURSE_TITLE        = '낭독 출석';        // 설정탭 B4 못 읽을 때만 쓰는 백업 제목
 const WEBAPP_COURSE_SUBTITLE     = '매일 낭독하고 도장 모으기 🌱';
 const WEBAPP_MAIN_COLOR          = '#6FA766';        // 설정탭 B7 비었을 때 기본 색
@@ -53,6 +54,7 @@ function getConfig() {
   const sched = _getSchedule_();
   let title = WEBAPP_COURSE_TITLE;   // 설정 못 읽으면 이 값으로 대체
   let color = WEBAPP_MAIN_COLOR;
+  let notice = null;                 // 설정탭 B11(제목)·B12(내용) → 공지 팝업. 둘 다 비면 안 뜸.
   try {
     const s = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(WEBAPP_SETTINGS_SHEET_NAME);
     if (s) {
@@ -60,9 +62,12 @@ function getConfig() {
       if (course) title = course + ' 출석페이지';                         // → "전래동화 1기 출석페이지"
       const c = String(s.getRange('B7').getValue() || '').trim();        // 메인색상 hex (예: #6FA766)
       if (/^#[0-9a-fA-F]{6}$/.test(c)) color = c;                        // 형식 맞을 때만 적용
+      const nTitle = String(s.getRange('B11').getValue() || '').trim();  // 공지 제목
+      const nBody  = String(s.getRange('B12').getValue() || '').trim();  // 공지 내용(줄바꿈 가능)
+      if (nTitle || nBody) notice = { title: nTitle, body: nBody };      // 하나라도 있으면 팝업 표시
     }
   } catch (e) {}
-  return { title: title, subtitle: WEBAPP_COURSE_SUBTITLE, mainColor: color, schedule: sched };
+  return { title: title, subtitle: WEBAPP_COURSE_SUBTITLE, mainColor: color, schedule: sched, notice: notice };
 }
 
 /** 초기 데이터 한 번에 묶어서 반환 → 화면 로딩 속도↑ (서버 왕복 3→1) */
