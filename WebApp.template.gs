@@ -391,7 +391,9 @@ function _digits(s) { return String(s == null ? '' : s).replace(/[^0-9]/g, ''); 
 
 function _igHandle(v) {
   let s = String(v || '').trim().toLowerCase();
-  s = s.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/^instagram\.com\//, '').replace(/^@/, '');
+  s = s.replace(/^https?:\/\//, '');
+  s = s.replace(/^([a-z0-9-]+\.)?instagram\.com\//, '');   // www./m./l. 등 서브도메인 + instagram.com/ 제거
+  s = s.replace(/^@/, '');
   s = s.replace(/[\/?].*$/, '');
   return s;
 }
