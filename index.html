@@ -447,7 +447,7 @@ function applyFamily(phone, res, silent){
   const btn=document.getElementById('loginBtn'), err=document.getElementById('loginErr');
   if(!res || !res.ok){
     if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent=(res&&res.error)||'조회 실패'; }
-    else { localStorage_del('rd_phone'); revealLogin(); }   // 자동 로그인 실패 → 로그인 폼 표시
+    else { revealLogin(); }   // 자동로그인 일시 실패(서버 순간오류 등)여도 저장 연락처는 유지 → 다음 방문 때 자동 재시도(로그아웃 안 됨)
     return;
   }
   __loginDecided=true;
