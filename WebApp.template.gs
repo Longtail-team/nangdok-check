@@ -25,6 +25,9 @@ const WEBAPP_SETTINGS_SHEET_NAME = '설정';           // 원본시트 설정 �
 const WEBAPP_COURSE_TITLE        = '낭독 출석';        // 설정탭 B4 못 읽을 때만 쓰는 백업 제목
 const WEBAPP_COURSE_SUBTITLE     = '매일 낭독하고 도장 모으기 🌱';
 const WEBAPP_MAIN_COLOR          = '#6FA766';        // 설정탭 B7 비었을 때 기본 색
+const WEBAPP_SUPPORT_URL         = 'http://momthereader.channel.io/'; // 1:1 고객센터(채널톡)
+// 연락처는 신청서엔 있으나 인증시트 명단에 없을 때 로그인 안내 문구 (과정명은 과정마다 수정)
+const WEBAPP_NOTFOUND_MSG        = '전래동화 수강생이신가요? 1:1 고객센터로 문의 주세요';
 
 // =================================================================
 // 진입점 — 데이터(JSON) API. 화면은 Netlify가 그림(구글 배지 없음).
@@ -141,7 +144,7 @@ function _buildFamilyPayload_(instagram) {
     });
   }
   if (members.length === 0) {
-    return { ok: false, error: '연락처는 확인됐지만 인증시트에서 명단을 찾지 못했어요. 관리자에게 문의해 주세요.' };
+    return { ok: false, error: WEBAPP_NOTFOUND_MSG, supportUrl: WEBAPP_SUPPORT_URL };
   }
   return { ok: true, instagram: instagram, checkboxCount: checkboxCount, members: members };
 }
