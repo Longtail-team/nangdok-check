@@ -52,8 +52,9 @@
   .login button{width:100%;margin-top:14px;font-family:var(--kr);font-size:15px;font-weight:700;color:#fff;background:var(--main);border:0;padding:14px;border-radius:14px;cursor:pointer;transition:.14s}
   .login button:hover{background:var(--main-dk)}
   .login button:disabled{opacity:.6;cursor:default}
-  .login .err{font-size:12.5px;color:#C4553B;margin-top:12px;min-height:16px}
-  .login .err a{display:inline-block;margin-top:6px;color:var(--main-dk);text-decoration:underline;font-weight:700}
+  .login .err{font-size:12.5px;color:#C4553B;margin-top:12px;min-height:16px;white-space:pre-line;line-height:1.5}
+  .login .err a{display:inline-block;margin-top:8px;font-size:11px;color:var(--ink-faint);text-decoration:underline;font-weight:500}
+  .login .err a:hover{color:var(--main-dk)}
   .login .foot{font-size:11.5px;color:var(--ink-faint);margin-top:20px;line-height:1.7}
 
   .banner{background:linear-gradient(150deg,var(--main-grad-1),var(--main-grad-2));color:#fff;padding:24px 22px 22px;border-radius:0 0 26px 26px;position:relative;overflow:hidden}
@@ -197,7 +198,7 @@
   <h1 id="loginTitle">낭독 출석</h1>
   <p>신청 때 입력한 <b>연락처</b>를 넣으면 우리 가족 출석이 열려요.</p>
   <label for="phone">연락처</label>
-  <input id="phone" type="tel" inputmode="numeric" placeholder="010-1234-5678" autocomplete="tel">
+  <input id="phone" type="tel" inputmode="numeric" placeholder="01012345678" autocomplete="tel">
   <button id="loginBtn">출석 확인하기</button>
   <div class="err" id="loginErr"></div>
   <div class="foot">한 번 입력하면 이 기기에서 다음부터 자동으로 열려요.<br>가족(부모·자녀)이 함께 표시됩니다.</div>

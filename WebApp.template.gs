@@ -26,8 +26,9 @@ const WEBAPP_COURSE_TITLE        = '낭독 출석';        // 설정탭 B4 못 �
 const WEBAPP_COURSE_SUBTITLE     = '매일 낭독하고 도장 모으기 🌱';
 const WEBAPP_MAIN_COLOR          = '#6FA766';        // 설정탭 B7 비었을 때 기본 색
 const WEBAPP_SUPPORT_URL         = 'http://momthereader.channel.io/'; // 1:1 고객센터(채널톡)
-// 연락처는 신청서엔 있으나 인증시트 명단에 없을 때 로그인 안내 문구 (과정명은 과정마다 수정)
-const WEBAPP_NOTFOUND_MSG        = '전래동화 수강생이신가요? 1:1 고객센터로 문의 주세요';
+// 로그인 실패 안내 문구(줄바꿈 \n 사용 → 프론트가 줄바꿈·CS링크 렌더). 과정마다 필요시 수정.
+const WEBAPP_UNREGISTERED_MSG    = '이 번호로 신청 내역을 찾지 못했어요.\n신청할 때 쓰신 번호가 맞는지 다시 한번 입력해 주세요.\n번호가 맞는데도 안 되면 아래로 문의해 주세요.';   // ② 번호 미등록(원본에 없음)
+const WEBAPP_NOTFOUND_MSG        = '신청 내역은 확인됐는데, 출석 명단에서 회원님을 찾지 못했어요.\n등록 처리 중이거나 계정 정보가 바뀌었을 수 있어요.\n아래로 문의해 주시면 확인해 드릴게요.';   // ③ 출석명단에 없음(인스타 매칭 실패)
 
 // =================================================================
 // 진입점 — 데이터(JSON) API. 화면은 Netlify가 그림(구글 배지 없음).
@@ -109,7 +110,7 @@ function getFamilyByPhone(phoneInput) {
       }
     }
     if (!instagram) {
-      return { ok: false, error: '등록된 연락처를 찾지 못했어요. 신청 시 입력한 번호가 맞는지 확인해 주세요.' };
+      return { ok: false, error: WEBAPP_UNREGISTERED_MSG, supportUrl: WEBAPP_SUPPORT_URL };
     }
     return _buildFamilyPayload_(instagram);
   } catch (e) {
