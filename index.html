@@ -393,6 +393,7 @@ const igSvg=`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" h
 
 /* ---------- state ---------- */
 let CFG=null, SCHED=null, FAM=[], active=0, LEADER={today:[],week:[]}, tab='today', shown=5, PHONE='';
+let __pendingFamily=null, __boardStarted=false;
 let NOTICE=null, __noticeShown=false;
 
 /* ---------- init ---------- */
@@ -402,7 +403,7 @@ window.addEventListener('load', ()=>{
   document.getElementById('noticeMask').addEventListener('click',e=>{ if(e.target.id==='noticeMask') closeNotice(false); });
   // 서비스워커 등록(홈 화면 설치 가능하게)
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
-  boot();   // config + leaderboard + 자동로그인 을 서버 1회 호출(getBootstrap)로
+  boot();   // 설정·가족 정보가 준비되면 먼저 화면을 열고 리더보드는 별도로 불러온다.
 
   document.getElementById('loginBtn').onclick=()=>doLogin(document.getElementById('phone').value,false);
   document.getElementById('phone').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(document.getElementById('phone').value,false); });
@@ -419,7 +420,9 @@ function localStorage_set(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
 function localStorage_del(k){ try{localStorage.removeItem(k);}catch(e){} }
 function rememberInUrl(phone){ try{ const u=new URL(window.location.href); u.searchParams.set('p', digits(phone)); history.replaceState(null,'',u.toString()); }catch(e){} }
 function doLogout(){
-  localStorage_del('rd_phone'); PHONE='';
+  localStorage_del('rd_phone'); PHONE=''; __pendingFamily=null; __boardStarted=false;
+  LEADER={today:[],week:[]};
+  document.getElementById('board').innerHTML='<div class="empty">불러오는 중…</div>';
   try{ history.replaceState(null,'',window.location.pathname); }catch(e){}
   document.getElementById('appView').classList.add('hidden');
   document.getElementById('loginView').classList.remove('hidden');
@@ -456,6 +459,8 @@ function applyFamily(phone, res, silent){
     else { revealLogin(); }   // 자동로그인 일시 실패(서버 순간오류 등)여도 저장 연락처는 유지 → 다음 방문 때 자동 재시도(로그아웃 안 됨)
     return;
   }
+  // 로그인 요청이 설정 응답보다 먼저 끝나도, 스케줄이 준비된 뒤에만 출석 화면을 그린다.
+  if(!SCHED){ __pendingFamily={phone,res,silent}; return; }
   __loginDecided=true;
   const _sp=document.getElementById('splash'); if(_sp) _sp.classList.add('hidden');
   PHONE=digits(phone); localStorage_set('rd_phone', phone);
@@ -465,6 +470,7 @@ function applyFamily(phone, res, silent){
   document.getElementById('appView').classList.remove('hidden');
   document.getElementById('famNote').textContent=`한 연락처로 등록된 ${FAM.length}명이에요`;
   renderAll();
+  loadLeaderboard();
   maybeShowNotice();
 }
 
@@ -542,30 +548,53 @@ function applyConfig(cfg){
   document.getElementById('loginTitle').textContent=fullTitle;
   NOTICE = (cfg.notice && (cfg.notice.title || cfg.notice.body)) ? cfg.notice : null;   // 설정탭 공지
   renderStatic();
+  if(__pendingFamily){
+    const pending=__pendingFamily; __pendingFamily=null;
+    applyFamily(pending.phone, pending.res, pending.silent);
+  }
 }
-function applyLeaderboard(res){ if(res && res.ok){ LEADER=res; renderBoard(); } }
+function configLoadFailed(){
+  showRefresh();
+  if(__pendingFamily){
+    __pendingFamily=null;
+    const btn=document.getElementById('loginBtn');
+    btn.disabled=false; btn.textContent='출석 확인하기';
+    document.getElementById('loginErr').textContent='설정을 불러오지 못했어요. 새로고침해 주세요.';
+  }
+  revealLogin();
+}
+function applyLeaderboard(res){ if(res && res.ok){ __boardStarted=true; LEADER=res; renderBoard(); } }
 
-function loadLeaderboard(){
-  call('getLeaderboard').then(applyLeaderboard).catch(()=>showRefresh());   // 재시도 실패 → 새로고침 안내
+function loadLeaderboard(force){
+  if(__boardStarted && !force) return;
+  __boardStarted=true;
+  call('getLeaderboard').then(applyLeaderboard).catch(()=>{ __boardStarted=false; showRefresh(); });
 }
 
-// 빠른 경로: config+leaderboard+가족을 서버 1회(getBootstrap)로. 옛 서버면 자동 3-콜 폴백.
+// 첫 방문에는 로그인 폼을 즉시 표시한다. 자동 로그인은 설정·가족만 기다린다.
 function boot(){
   try{ const c=localStorage_get('rd_course'); if(c){ const st=document.querySelector('#splash .txt'); if(st) st.textContent=c+' 출석 페이지를 불러오고 있어요…'; } }catch(e){}
   const p0 = digits(getParam('p')) || localStorage_get('rd_phone');
-  call('getBootstrap', p0||'').then(b=>{
+  if(!p0){
+    revealLogin();
+    call('getConfig').then(applyConfig).catch(configLoadFailed);
+    return;
+  }
+  // 부팅 요청은 한 번만 시도한다. 시간 초과 뒤 같은 무거운 요청을 반복하지 않는다.
+  callOnce('getBootstrap', [p0, 'deferLeaderboard']).then(b=>{
     if(b && b.config){
       applyConfig(b.config);
-      applyLeaderboard(b.leaderboard);
-      if(p0){ applyFamily(p0, b.family, true); } else { revealLogin(); }
+      if(b.leaderboard && b.leaderboard.ok) applyLeaderboard(b.leaderboard);
+      applyFamily(p0, b.family, true);
+    } else if(b && String(b.error||'').indexOf('알 수 없는 요청')!==-1){
+      legacyBoot(p0);   // getBootstrap 자체를 지원하지 않는 옛 서버만 폴백
     } else {
-      legacyBoot(p0);   // 서버가 getBootstrap 미지원(옛 배포)
+      revealLogin(); showRefresh();
     }
-  }).catch(()=> legacyBoot(p0));
+  }).catch(()=>{ revealLogin(); showRefresh(); });
 }
 function legacyBoot(p0){
-  call('getConfig').then(applyConfig).catch(()=>showRefresh());
-  loadLeaderboard();
+  call('getConfig').then(applyConfig).catch(configLoadFailed);
   if(p0){ doLogin(p0, true); } else { revealLogin(); }
 }
 function renderBoard(){
@@ -657,7 +686,7 @@ function toggle(p, day){
   call('submitCheck', p.rowIndex, day, newVal).then(res=>{
     if(!res.ok){ p.checks[day-1]=!newVal; renderAll(); toast(res.error||'저장 실패, 다시 시도해 주세요'); return; }
     p.completed=res.completed;
-    loadLeaderboard();                    // 오늘의 성실왕 갱신
+    loadLeaderboard(true);                // 오늘의 성실왕 갱신
   }).catch(e=>{ p.checks[day-1]=!newVal; renderAll(); toast('네트워크 오류, 다시 시도해 주세요'); });
 }
 
