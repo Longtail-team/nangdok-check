@@ -8,7 +8,7 @@
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6FA766">
+<meta name="theme-color" content="#2f8edd">
 <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 
@@ -20,7 +20,7 @@
 
 <style>
   :root{
-    --main:#6FA766;
+    --main:#2f8edd;
     --main-dk:color-mix(in srgb, var(--main) 58%, #14140f);
     --main-soft:color-mix(in srgb, var(--main) 14%, #fff);
     --main-grad-1:color-mix(in srgb, var(--main) 90%, #fff);
@@ -195,7 +195,7 @@
 <!-- LOGIN -->
 <div id="loginView" class="login hidden">
   <div class="logo">📖</div>
-  <h1 id="loginTitle">낭독 출석</h1>
+  <h1 id="loginTitle">낭독스쿨 전래동화 1기 출석 페이지</h1>
   <p>신청 때 입력한 <b>연락처</b>를 넣으면 우리 가족 출석이 열려요.</p>
   <label for="phone">연락처</label>
   <input id="phone" type="tel" inputmode="numeric" placeholder="01012345678" autocomplete="tel">
@@ -393,7 +393,7 @@ const igSvg=`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" h
 
 /* ---------- state ---------- */
 let CFG=null, SCHED=null, FAM=[], active=0, LEADER={today:[],week:[]}, tab='today', shown=5, PHONE='';
-let __pendingFamily=null, __boardStarted=false;
+let __pendingFamily=null, __boardStarted=false, __configFailed=false;
 let NOTICE=null, __noticeShown=false;
 
 /* ---------- init ---------- */
@@ -439,6 +439,10 @@ function revealLogin(){                 // 로그인 폼 노출(스플래시 숨
 }
 function doLogin(phone, silent){
   const btn=document.getElementById('loginBtn'), err=document.getElementById('loginErr');
+  if(digits(phone).length<8){
+    if(!silent) err.textContent='연락처를 정확히 입력해 주세요.';
+    return;
+  }
   if(!silent){ btn.disabled=true; btn.textContent='확인 중…'; err.textContent=''; }
   call('getFamilyByPhone', phone)
     .then(res=> applyFamily(phone, res, silent))
@@ -447,7 +451,7 @@ function doLogin(phone, silent){
       else { revealLogin(); showRefresh(); }   // 자동 로그인 네트워크 실패 → 로그인 폼 + 새로고침 안내
     });
 }
-// 가족 조회 결과 적용(자동/수동 로그인 + getBootstrap 공통)
+// 가족 조회 결과 적용(자동/수동 로그인 공통)
 function applyFamily(phone, res, silent){
   const btn=document.getElementById('loginBtn'), err=document.getElementById('loginErr');
   if(!res || !res.ok){
@@ -460,7 +464,13 @@ function applyFamily(phone, res, silent){
     return;
   }
   // 로그인 요청이 설정 응답보다 먼저 끝나도, 스케줄이 준비된 뒤에만 출석 화면을 그린다.
-  if(!SCHED){ __pendingFamily={phone,res,silent}; return; }
+  if(!SCHED){
+    if(__configFailed){
+      if(!silent){ btn.disabled=false; btn.textContent='출석 확인하기'; err.textContent='설정을 불러오지 못했어요. 새로고침해 주세요.'; }
+      revealLogin(); showRefresh(); return;
+    }
+    __pendingFamily={phone,res,silent}; return;
+  }
   __loginDecided=true;
   const _sp=document.getElementById('splash'); if(_sp) _sp.classList.add('hidden');
   PHONE=digits(phone); localStorage_set('rd_phone', phone);
@@ -538,6 +548,7 @@ function closeNotice(persist){
 
 /* ---------- 부팅: 초기 데이터 로딩 ---------- */
 function applyConfig(cfg){
+  __configFailed=false;
   CFG=cfg; SCHED=cfg.schedule;
   if(cfg.mainColor) document.documentElement.style.setProperty('--main', cfg.mainColor);
   const course=String(cfg.title||'').replace(/\s*출석\s*페이지$/,'').trim();
@@ -554,6 +565,7 @@ function applyConfig(cfg){
   }
 }
 function configLoadFailed(){
+  __configFailed=true;
   showRefresh();
   if(__pendingFamily){
     __pendingFamily=null;
@@ -580,22 +592,11 @@ function boot(){
     call('getConfig').then(applyConfig).catch(configLoadFailed);
     return;
   }
-  // 부팅 요청은 한 번만 시도한다. 시간 초과 뒤 같은 무거운 요청을 반복하지 않는다.
-  callOnce('getBootstrap', [p0, 'deferLeaderboard']).then(b=>{
-    if(b && b.config){
-      applyConfig(b.config);
-      if(b.leaderboard && b.leaderboard.ok) applyLeaderboard(b.leaderboard);
-      applyFamily(p0, b.family, true);
-    } else if(b && String(b.error||'').indexOf('알 수 없는 요청')!==-1){
-      legacyBoot(p0);   // getBootstrap 자체를 지원하지 않는 옛 서버만 폴백
-    } else {
-      revealLogin(); showRefresh();
-    }
-  }).catch(()=>{ revealLogin(); showRefresh(); });
-}
-function legacyBoot(p0){
-  call('getConfig').then(applyConfig).catch(configLoadFailed);
-  if(p0){ doLogin(p0, true); } else { revealLogin(); }
+  // 설정과 가족 조회는 서로 독립적이므로 동시에 시작한다.
+  // Apps Script 한 실행에서 순서대로 처리하면 두 시트 조회 시간이 합쳐진다.
+  callOnce('getConfig', []).then(applyConfig).catch(configLoadFailed);
+  callOnce('getFamilyByPhone', [p0]).then(res=>applyFamily(p0,res,true))
+    .catch(()=>{ revealLogin(); showRefresh(); });
 }
 function renderBoard(){
   const src = tab==='today'?LEADER.today:LEADER.week;
